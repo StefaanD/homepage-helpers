@@ -5,9 +5,6 @@ echo "Updating homepage-helpers..."
 
 cd /mnt/user/appdata/homepage-helpers
 
-echo "Pulling latest code..."
-git pull
-
 echo "Building Docker image..."
 docker build -t homepage-helpers .
 
