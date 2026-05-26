@@ -26,6 +26,17 @@ def unraid_updates():
         }), 400
 
     return jsonify(
+        unraid.get_updates(url, api_key, csrf_token)
+    )
+
+
+@app.route("/unraid/stats")
+def unraid_stats():
+    url = request.args.get("url")
+    api_key = request.args.get("apikey")
+    csrf_token = request.args.get("csrftoken")
+
+    return jsonify(
         unraid.get_stats(url, api_key, csrf_token)
     )
 

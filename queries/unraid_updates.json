@@ -1,0 +1,3 @@
+{
+  "query": "query ContainerUpdateStatuses { docker { containerUpdateStatuses { name updateStatus } } }"
+}

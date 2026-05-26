@@ -1,0 +1,3 @@
+{
+  "query": "query { array { state capacity { kilobytes { total free } } disks { name size status temp } } metrics { cpu { percentTotal } memory { total percentTotal } } info { baseboard { manufacturer model } cpu { brand cores vendor } os { release distro } system { manufacturer model } } internalBootContext { poolNames shareNames } }"
+}

@@ -1,28 +1,21 @@
+import json
 import requests
+from pathlib import Path
 import time
 
-# cache in seconden
+BASE = Path(__file__).parent.parent / "queries"
+
 CACHE_TTL = 60
 _cache = {}
 
 
-QUERY = {
-    "query": """
-    query ContainerUpdateStatuses {
-      docker {
-        containerUpdateStatuses {
-          name
-          updateStatus
-        }
-      }
-    }
-    """
-}
+def load_query(filename):
+    with open(BASE / filename) as f:
+        return json.load(f)
 
 
-def get_stats(unraid_url, api_key, csrf_token):
-    cache_key = f"{unraid_url}:{api_key}"
-
+def graphql_call(url, api_key, csrf_token, query_file):
+    cache_key = f"{url}:{query_file}"
     now = time.time()
 
     if cache_key in _cache:
@@ -37,42 +30,52 @@ def get_stats(unraid_url, api_key, csrf_token):
         "x-csrf-token": csrf_token
     }
 
-    try:
-        response = requests.post(
-            unraid_url,
-            json=QUERY,
-            headers=headers,
-            timeout=10
-        )
+    response = requests.post(
+        url,
+        json=load_query(query_file),
+        headers=headers,
+        timeout=10
+    )
 
-        response.raise_for_status()
+    response.raise_for_status()
 
-        data = response.json()
+    data = response.json()
 
-        containers = data["data"]["docker"]["containerUpdateStatuses"]
+    _cache[cache_key] = {
+        "time": now,
+        "data": data
+    }
 
-        updates = [
-            c["name"]
-            for c in containers
-            if c["updateStatus"] == "UPDATE_AVAILABLE"
-        ]
+    return data
 
-        result = {
-            "count": len(updates),
-            "updates": updates,
-            "text": " • ".join(updates) if updates else "Alles up-to-date"
-        }
 
-        _cache[cache_key] = {
-            "time": now,
-            "data": result
-        }
+def get_updates(url, api_key, csrf_token):
+    data = graphql_call(
+        url,
+        api_key,
+        csrf_token,
+        "unraid_updates.json"
+    )
 
-        return result
+    containers = data["data"]["docker"]["containerUpdateStatuses"]
 
-    except Exception as e:
-        return {
-            "count": -1,
-            "updates": [],
-            "text": f"Error: {str(e)}"
-        }
+    updates = [
+        c["name"]
+        for c in containers
+        if c["updateStatus"] == "UPDATE_AVAILABLE"
+    ]
+
+    return {
+        "count": len(updates),
+        "updates": updates,
+        "text": " • ".join(updates) if updates else "Alles up-to-date"
+    }
+
+
+def get_stats(url, api_key, csrf_token):
+    return graphql_call(
+        url,
+        api_key,
+        csrf_token,
+        "unraid_stats.json"
+    )
