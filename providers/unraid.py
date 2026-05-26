@@ -1,4 +1,9 @@
 import requests
+import time
+
+# cache in seconden
+CACHE_TTL = 60
+_cache = {}
 
 
 QUERY = {
@@ -16,6 +21,15 @@ QUERY = {
 
 
 def get_stats(unraid_url, api_key, csrf_token):
+    cache_key = f"{unraid_url}:{api_key}"
+
+    now = time.time()
+
+    if cache_key in _cache:
+        cached = _cache[cache_key]
+        if now - cached["time"] < CACHE_TTL:
+            return cached["data"]
+
     headers = {
         "Content-Type": "application/json",
         "apollo-require-preflight": "true",
@@ -43,11 +57,18 @@ def get_stats(unraid_url, api_key, csrf_token):
             if c["updateStatus"] == "UPDATE_AVAILABLE"
         ]
 
-        return {
+        result = {
             "count": len(updates),
             "updates": updates,
             "text": " • ".join(updates) if updates else "Alles up-to-date"
         }
+
+        _cache[cache_key] = {
+            "time": now,
+            "data": result
+        }
+
+        return result
 
     except Exception as e:
         return {
