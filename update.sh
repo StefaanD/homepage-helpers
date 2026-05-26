@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "Updating homepage-helpers..."
-
 cd /mnt/user/appdata/homepage-helpers
 
 echo "Building Docker image..."
@@ -18,9 +16,6 @@ docker run -d \
   -p 8383:8383 \
   -v /mnt/user/appdata/tautulli:/config \
   -e TAUTULLI_DB=/config/tautulli.db \
-  -e REMOVED=REMOVED \
-  -e REMOVED=REMOVED \
-  -e REMOVED=REMOVED \
   homepage-helpers
 
 echo "Done."

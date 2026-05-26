@@ -1,20 +1,5 @@
 import requests
-import os
 
-REMOVED = os.getenv(
-    "REMOVED",
-    "REMOVED"
-)
-
-API_KEY = os.getenv("REMOVED")
-CSRF_TOKEN = os.getenv("REMOVED")
-
-HEADERS = {
-    "Content-Type": "application/json",
-    "apollo-require-preflight": "true",
-    "x-api-key": API_KEY,
-    "x-csrf-token": CSRF_TOKEN
-}
 
 QUERY = {
     "query": """
@@ -30,12 +15,19 @@ QUERY = {
 }
 
 
-def get_stats():
+def get_stats(unraid_url, api_key, csrf_token):
+    headers = {
+        "Content-Type": "application/json",
+        "apollo-require-preflight": "true",
+        "x-api-key": api_key,
+        "x-csrf-token": csrf_token
+    }
+
     try:
         response = requests.post(
-            REMOVED,
+            unraid_url,
             json=QUERY,
-            headers=HEADERS,
+            headers=headers,
             timeout=10
         )
 

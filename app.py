@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from providers import tautulli, unraid
 
 app = Flask(__name__)
@@ -16,7 +16,18 @@ def tautulli_stats():
 
 @app.route("/unraid/updates")
 def unraid_updates():
-    return jsonify(unraid.get_stats())
+    url = request.args.get("url")
+    api_key = request.args.get("apikey")
+    csrf_token = request.args.get("csrftoken")
+
+    if not all([url, api_key, csrf_token]):
+        return jsonify({
+            "error": "missing url, apikey or csrftoken"
+        }), 400
+
+    return jsonify(
+        unraid.get_stats(url, api_key, csrf_token)
+    )
 
 
 if __name__ == "__main__":
