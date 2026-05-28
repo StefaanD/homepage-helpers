@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from providers import tautulli, unraid
+from providers import tautulli, unraid, ipmi
 
 app = Flask(__name__)
 
@@ -39,6 +39,11 @@ def unraid_stats():
     return jsonify(
         unraid.get_stats(url, api_key, csrf_token)
     )
+
+
+@app.route("/ipmi/sensors")
+def ipmi_sensors():
+    return jsonify(ipmi.get_sensors())
 
 
 if __name__ == "__main__":
