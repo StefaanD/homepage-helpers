@@ -43,7 +43,23 @@ def unraid_stats():
 
 @app.route("/ipmi/sensors")
 def ipmi_sensors():
-    return jsonify(ipmi.get_sensors())
+
+    host = request.args.get("host")
+    username = request.args.get("username")
+    password = request.args.get("password")
+
+    if not all([host, username, password]):
+        return jsonify({
+            "error": "missing host, username or password"
+        }), 400
+
+    return jsonify(
+        ipmi.get_sensors(
+            host,
+            username,
+            password
+        )
+    )
 
 
 if __name__ == "__main__":

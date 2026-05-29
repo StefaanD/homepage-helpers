@@ -1,0 +1,14 @@
+{
+  "temperatures": [
+    "CPU Temp",
+    "System Temp",
+    "Peripheral Temp"
+  ],
+  "fans": [
+    "FAN2",
+    "FAN3",
+    "FAN4",
+    "FAN5",
+    "FANB"
+  ]
+}

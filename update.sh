@@ -15,11 +15,10 @@ docker run -d \
   --restart unless-stopped \
   -p 8383:8383 \
   -v /mnt/user/appdata/tautulli:/config \
-  -v /usr/sbin/ipmi-sensors:/usr/sbin/ipmi-sensors \
   -e TAUTULLI_DB=/config/tautulli.db \
-  -l homepage.group=Containers Rocinante \
-  -l homepage.icon=/icons/homepage-light.svg \
-  -l homepage.name=Homepage helpers \
+  -l homepage.group="Containers Rocinante" \
+  -l homepage.icon="/icons/homepage-light.svg" \
+  -l homepage.name="Homepage helpers" \
   -l homepage.description="Helper scripts for Homepage" \
   homepage-helpers
 
