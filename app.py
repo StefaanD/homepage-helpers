@@ -1,17 +1,26 @@
 from flask import Flask, jsonify, request
-from providers import tautulli, unraid, ipmi
+from providers import health, tautulli, unraid, ipmi
 
 app = Flask(__name__)
 
 
 @app.route("/health")
-def health():
-    return jsonify({"status": "ok"})
+def health_check():
+    return jsonify(
+        health.get_health()
+    )
+
 
 
 @app.route("/tautulli/stats")
 def tautulli_stats():
-    return jsonify(tautulli.get_stats())
+    aggregate = request.args.get("aggregate", "on").lower()
+
+    return jsonify(
+        tautulli.get_stats(
+            aggregate=(aggregate != "off")
+        )
+    )
 
 
 @app.route("/unraid/updates")
