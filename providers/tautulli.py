@@ -2,9 +2,14 @@ import sqlite3
 import os
 import time
 
-DB_PATH = os.getenv("TAUTULLI_DB", "/config/tautulli.db")
+DB_PATH = os.getenv(
+    "TAUTULLI_DB",
+    "/config/tautulli.db"
+)
 
-CACHE_TTL = 120
+CACHE_TTL = int(
+    os.getenv("CACHE_TTL", "120")
+)
 
 _cache = {}
 

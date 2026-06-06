@@ -14,6 +14,8 @@ docker run -d \
   --name homepage-helpers \
   --restart unless-stopped \
   -p 8383:8383 \
+  -e PORT=8383 \
+  -e CACHE_TTL=120 \
   -v /mnt/user/appdata/tautulli:/config \
   -e TAUTULLI_DB=/config/tautulli.db \
   -l homepage.group="Containers Rocinante" \
