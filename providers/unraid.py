@@ -2,6 +2,11 @@ import json
 import requests
 from pathlib import Path
 import time
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 BASE = Path(__file__).parent.parent / "queries"
 
@@ -21,6 +26,7 @@ def graphql_call(url, api_key, csrf_token, query_file):
     if cache_key in _cache:
         cached = _cache[cache_key]
         if now - cached["time"] < CACHE_TTL:
+            logger.info("Unraid cache hit")
             return cached["data"]
 
     headers = {
@@ -30,6 +36,8 @@ def graphql_call(url, api_key, csrf_token, query_file):
         "x-csrf-token": csrf_token
     }
 
+    logger.info(f"Fetching Unraid data using {query_file}")
+
     response = requests.post(
         url,
         json=load_query(query_file),
@@ -37,7 +45,12 @@ def graphql_call(url, api_key, csrf_token, query_file):
         timeout=10
     )
 
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+
+    except Exception as e:
+        logger.error(f"Unraid request failed: {e}")
+        raise
 
     data = response.json()
 

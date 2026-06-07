@@ -1,6 +1,11 @@
 import json
 import subprocess
+import logging
 from pathlib import Path
+from venv import logger
+
+
+logger = logging.getLogger(__name__)
 
 
 BASE = Path(__file__).parent.parent / "queries"
@@ -23,10 +28,17 @@ def get_sensors(host, username, password):
         "--quiet-cache"
     ]
 
-    result = subprocess.check_output(
-        cmd,
-        text=True
-    )
+    logger.info(f"Fetching IPMI sensors from {host}")
+
+    try:
+        result = subprocess.check_output(
+            cmd,
+            text=True
+        )
+
+    except Exception as e:
+        logger.error(f"IPMI command failed: {e}")
+        raise
 
     temperatures = {}
     fans = {}
