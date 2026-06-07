@@ -28,18 +28,20 @@ def get_stats(aggregate=True):
     # cache hit
     if cache_key in _cache:
 
-        logger.info("Tautulli cache hit")
-
         cached = _cache[cache_key]
 
         if now - cached["time"] < CACHE_TTL:
+
+            logger.info("Tautulli cache hit")
+
             return cached["data"]
+
+    logger.info("Fetching Tautulli stats from database")
 
     # database query
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
-    logger.info("Fetching Tautulli stats from database")
+    cursor = conn.cursor()
 
     cursor.execute("""
         SELECT
