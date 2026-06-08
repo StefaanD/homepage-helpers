@@ -11,9 +11,9 @@ This provider actually serves two endpoints;
 ### 1. Unraid stats
 
 Endpoint for this is `/unraid/stats` and expects the following input parameters to work;
-* `url` which is the host IP address of FQDN
-* `apikey` which is the Unraid API key
-* `token` which is the Unraid CSRF token
+* `url` the host IP address of FQDN
+* `apikey` the Unraid API key
+* `token` the Unraid CSRF token
 
 This endpoint uses the `/queries/unraid_stats.json` file to set the query executed against Unraid's API
 

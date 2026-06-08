@@ -9,9 +9,9 @@ RUN apk add --no-cache freeipmi
 ### 1. IPMI stats
 
 The endpoint is `/ipmi/sensors` and expects the following input parameters to work;
-* `host` which is the host IP address of FQDN
-* `username` which is the username used to log into the IPMI interface
-* `password` which is the password used to log into the IPMI interface
+* `host` the host IP address of FQDN
+* `username` the username used to log into the IPMI interface
+* `password` the password used to log into the IPMI interface
 
 This endpoint also uses a configuration file found under `/queries/ipmi_sensors.json` and sets which fields to present in the output from the ipmi-sensors commands output. An example could be like this.
 ```

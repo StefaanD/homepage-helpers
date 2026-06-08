@@ -1,5 +1,10 @@
 # Homepage Helpers
 
+![Release](https://img.shields.io/github/v/release/StefaanD/homepage-helpers)
+![Docker Pulls](https://img.shields.io/badge/docker-ghcr.io-blue)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![License](https://img.shields.io/github/license/StefaanD/homepage-helpers)
+
 This is a simple repo with helper scripts written for Homepage (https://gethomepage.dev/).
 
 ## 1. Preface
@@ -49,7 +54,7 @@ homepage-helpers/
 
 2. The `providers` folder—as said under point 1—contains Python scripts performing one or more tasks and are bound to a specific OS (in my case Unraid) or Docker container.
 
-3. The `queries` folder is where json files are stored and are used by the provider script to read what needs to be fetched. As such these json files should provide some flexibility if one wants to use different fields or get more statistics from the provider.
+3. The `queries` folder is where json files are stored and are used by the provider script to read what needs to be fetched, so basically these are configuration files. As such these json files should provide some flexibility if one wants to use different fields or get more statistics from the provider.
 
 ## 5. Endpoints
 
