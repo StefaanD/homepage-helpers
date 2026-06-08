@@ -24,4 +24,4 @@ This query simply gets the library name, the type and the count of the titles in
 
 ### 2. Examples
 
-- [Examples](docs/EXAMPLES.md)
+- [Examples](/docs/EXAMPLES.md)

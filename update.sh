@@ -22,6 +22,6 @@ docker run -d \
   -l homepage.icon="/icons/homepage-light.svg" \
   -l homepage.name="Homepage helpers" \
   -l homepage.description="Helper scripts for Homepage" \
-  homepage-helpers
+  ghcr.io/stefaand/homepage-helpers:latest
 
 echo "Done."

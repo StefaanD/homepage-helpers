@@ -1,6 +1,6 @@
 ## Unraid
 
-As stated in [Readme](README.md) i use Unraid OS to run my Homepage docker and also here the default widget didn't provide my what i actually wanted to show on my homepage.
+As stated in Readme file, i use Unraid OS to run my Homepage docker and also here the default widget didn't provide my what i actually wanted to show on my homepage.
 
 This provider makes use of the Unraid API, for more information see the [Using the Unraid API](https://docs.unraid.net/API/how-to-use-the-api/) documentation.
 
@@ -44,4 +44,4 @@ This endpoint also uses a configuration file under `/queries/unraid_updates.json
 
 ### 3. Examples
 
-- [Examples](docs/EXAMPLES.md)
+- [Examples](/docs/EXAMPLES.md)

@@ -14,7 +14,7 @@ Some remarks and warnings upfront to make some things clear;
 
 ## 2. Project intro
 
-This project provides custom Homepage helper APIs for Unraid homelabs.
+This project provides custom Homepage helper APIs for Unraid homelabs, but can be used on other platforms as well.
 
 ## 3. Features
 
@@ -78,13 +78,27 @@ def unraid_stats():
 
 The docker container which is created uses the port 8383 for well it's own API you might call it, but you can use an .env file, see [.env.example](docs/.env.example) to set some standard values like the port, Tautulli database location or caching duration. Or in case of using the container on Unraid, edit the template values.
 
+## 9. Installation
 
-## 7. Providers
+Installation on system other than Unraid can be done with the following docker run command;
+```
+docker run -d \
+  --name homepage-helpers \
+  --restart unless-stopped \
+  -p 8383:8383 \
+  -e PORT=8383 \
+  -e CACHE_TTL=120 \
+  -v /mnt/user/appdata/tautulli:/config \
+  -e TAUTULLI_DB=/config/tautulli.db \
+  ghcr.io/stefaand/homepage-helpers:latest
+```
+
+## 8. Providers
 
 - [Tautulli](docs/TAUTULLI.md)
 - [Unraid](docs/UNRAID.md)
 - [IPMI](docs/IPMI.md)
 
-## 8. Examples
+## 9. Examples
 
-Examples on how to use the providers with Homepage customapi widget can be found at [Examples](docs/EXAMPLES.md).
+Examples can be found at [Examples](docs/EXAMPLES.md)

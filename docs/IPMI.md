@@ -33,4 +33,4 @@ This endpoint also uses a configuration file found under `/queries/ipmi_sensors.
 
 ### 2. Examples
 
-- [Examples](docs/EXAMPLES.md)
+- [Examples](/docs/EXAMPLES.md)
