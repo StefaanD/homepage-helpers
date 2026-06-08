@@ -30,7 +30,7 @@ An example Homepage widget with `aggregate=on` for this endpoint could look like
 		  field: albums
 ```
 
-![](/images/tautulli_stats_aggregate_on.png)
+![](/docs/images/tautulli_stats_aggregate_on.png)
 
 And an example with `aggregate=off` could look like shown below. In this case we use `display=list` instead of `display=block` as the block setting for display has a limit of 4 fields in a widget.
 
@@ -120,7 +120,7 @@ Rocinante API:
   scale: 1024
 ```
 
-![](/images/unraid_stats.png)
+![](/docs/images/unraid_stats.png)
 
 As shown in the widget example the input parameters are stored in an environment file and are as follows;
 * `HOMEPAGE_VAR_SERVER_IP` = IP adress or FQDN for the server to query
@@ -150,7 +150,7 @@ An example Homepage widget for the Unraid stats could look like this;
               label: Containers
 ```
 
-![](/images/unraid_updates.png)
+![](/docs/images/unraid_updates.png)
 
 As shown in the widget example the input parameters are stored in an environment file and are as follows;
 * `HOMEPAGE_VAR_SERVER_IP` = IP adress or FQDN for the server to query
@@ -195,7 +195,7 @@ An example Homepage widget for the Unraid stats could look like this;
             suffix: " RPM"
 ```
 
-![](/images/ipmi_sensors.png)
+![](/docs/images/ipmi_sensors.png)
 
 As shown in the widget example the input parameters are stored in an environment file and are as follows;
 * `HOMEPAGE_VAR_IPMI_IP` = IP adress where IPMI interface can be reached
