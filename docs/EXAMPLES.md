@@ -66,7 +66,7 @@ And an example with `aggregate=off` could look like shown below. In this case we
               format: number
 ```
 
-![](/images/tautulli_stats_aggregate_off.png)
+![](//docs/images/tautulli_stats_aggregate_off.png)
 
 ### 2. Unraid stats
 
