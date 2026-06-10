@@ -1,3 +1,12 @@
+"""
+Tautulli provider for Homepage Helpers.
+
+Requires:
+- connection to the Tautulli DB /config/tautulli.db (set TAUTULLI_DB env var if different)
+
+Returns aggregated or detailed library stats in JSON format for Homepage customapi widgets.
+"""
+
 import sqlite3
 import os
 import time

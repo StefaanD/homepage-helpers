@@ -8,7 +8,7 @@ Below are two examples for the Tautulli stats, one with aggregated stats and onc
 
 For a description of the endpoint see [Tautulli provider](/docs/TAUTULLI.md).
 
-An example Homepage widget with `aggregate=on` for this endpoint could look like this;
+An example Homepage widget with `aggregate=on` for this endpoint could look like shown below. In fact the call can have the `aggegrate=on` omitted since the default behaviour is that the result is returned aggregated.
 
 ```
 - Plex statistics:
@@ -74,7 +74,7 @@ The Unraid stats gets various statistics for an Unraid server, configured in the
 
 For a description of the endpoint see [Unraid provider](/docs/UNRAID.md).
 
-An example Homepage widget for the Unraid stats could look like this;
+An example Homepage widget for the Unraid stats with the provided `/queries/unraid_stats.json` configuration file, could look like this;
 
 ```
 Rocinante API:

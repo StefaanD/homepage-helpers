@@ -1,3 +1,14 @@
+"""
+Unraid provider for Homepage Helpers.
+
+Requires:
+- queries/unraid_stats.json
+- queries/unraid_updates.json
+- Unraid API key and CSRF token (set UNRAID_URL, UNRAID_API_KEY, UNRAID_CSRF_TOKEN env vars)
+
+Returns system stats and available updates in JSON format for Homepage customapi widgets.
+"""
+
 import json
 import requests
 from pathlib import Path

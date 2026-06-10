@@ -13,4 +13,4 @@ EXPOSE 8383
 
 HEALTHCHECK CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8383/health || exit 1
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:8383", "app:app"]

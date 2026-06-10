@@ -1,8 +1,19 @@
+"""
+IPMI provider for Homepage Helpers.
+
+Requires:
+- queries/ipmi_sensors.json
+- freeipmi (ipmi-sensors command available in container)
+
+Returns selected sensor values in JSON format for Homepage customapi widgets.
+"""
+
+import ipaddress
 import json
-import subprocess
 import logging
+import re
+import subprocess
 from pathlib import Path
-from venv import logger
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +27,25 @@ def load_config():
         return json.load(f)
 
 
+def validate_host(host):
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
+def validate_username(username):
+    return re.match(r"^[a-zA-Z0-9._\-]+$", username)
+
+
 def get_sensors(host, username, password):
+
+    if not validate_host(host):
+        raise ValueError("Invalid hostname")
+
+    if not validate_username(username):
+        raise ValueError("Invalid username")
 
     config = load_config()
 
