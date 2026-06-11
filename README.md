@@ -107,3 +107,24 @@ docker run -d \
 ## 9. Examples
 
 Examples can be found at [Examples](docs/EXAMPLES.md)
+
+## 10. Planned providers
+
+### High priority
+
+* Vaultwarden
+* Firefly III
+* Zerobyte
+
+### Existing provider enhancements
+
+* Unraid disk statistics
+* Unraid VM statistics
+* Unraid Docker statistics
+* Tautulli library breakdown
+
+### Future providers
+
+* Authelia
+* Additional backup solutions
+* Additional self-hosted finance solutions
