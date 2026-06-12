@@ -112,9 +112,10 @@ Examples can be found at [Examples](docs/EXAMPLES.md)
 
 ### High priority
 
-* Vaultwarden
+* ~~Vaultwarden~~ (unfortunaly no public API, only a CLI API)
 * Firefly III
 * Zerobyte
+* Tracearr
 
 ### Existing provider enhancements
 
