@@ -79,9 +79,11 @@ def call_tracearr(config_file):
 
     data = response.json()
 
-    data["watchTimeHuman"] = format_duration(
-        data["totalWatchTimeMs"]
-    )
+    # data["totalWatchTimeHuman"] = format_duration(
+    #     data["totalWatchTimeMs"]
+    # )
+
+    data["playCount"] = "1d 14h"
 
     return data
 
