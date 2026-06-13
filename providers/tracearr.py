@@ -4,6 +4,7 @@ Tracearr provider for Homepage Helpers.
 Requires:
 - queries/tracearr_resolution.json
 - queries/tracearr_codecs.json
+- queries/tracearr_session_aggregates.json
 - connection to the Tracearr API (set TRACEARR_URL and TRACEARR_TOKEN env vars)
 
 Returns resolution and codec stats in JSON format for Homepage customapi widgets.
@@ -76,6 +77,12 @@ def call_tracearr(config_file):
         "data": data
     }
 
+    data = response.json()
+
+    data["totalWatchTimeHuman"] = format_duration(
+        data["totalWatchTimeMs"]
+    )
+
     return data
 
 
@@ -89,3 +96,14 @@ def get_codecs():
 
 def get_session_aggregates():
     return call_tracearr("tracearr_session_aggregates.json")
+
+
+# --- BEGIN DURATION CALCULATION ---
+def format_duration(ms):
+    seconds = ms // 1000
+
+    days = seconds // 86400
+    hours = (seconds % 86400) // 3600
+
+    return f"{days}d {hours}h"
+# --- END DURATION CALCULATION ---
