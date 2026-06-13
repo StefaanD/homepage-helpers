@@ -103,6 +103,7 @@ docker run -d \
 - [Tautulli](docs/TAUTULLI.md)
 - [Unraid](docs/UNRAID.md)
 - [IPMI](docs/IPMI.md)
+- [Tracearr](docs/TRACEARR.md)
 
 ## 9. Examples
 

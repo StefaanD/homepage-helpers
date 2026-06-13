@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from providers import health, tautulli, unraid, ipmi
+from providers import health, tautulli, unraid, ipmi, tracearr
 import os
 import logging
 
@@ -16,15 +16,16 @@ logger = logging.getLogger(__name__)
 
 PORT = int(os.getenv("PORT", "8383"))
 
-
+# --- BEGIN HEALTH ENDPOINT ---
 @app.route("/health")
 def health_check():
     return jsonify(
         health.get_health()
     )
+# --- END HEALTH ENDPOINT ---
 
 
-
+# --- BEGIN TAUTULLI ENDPOINTS ---
 @app.route("/tautulli/stats")
 def tautulli_stats():
     aggregate = request.args.get("aggregate", "on").lower()
@@ -34,8 +35,10 @@ def tautulli_stats():
             aggregate=(aggregate != "off")
         )
     )
+# --- END TAUTULLI ENDPOINTS ---
 
 
+# --- UNRAID ENDPOINTS ---
 @app.route("/unraid/updates")
 def unraid_updates():
     url = request.args.get("url")
@@ -61,8 +64,10 @@ def unraid_stats():
     return jsonify(
         unraid.get_stats(url, api_key, csrf_token)
     )
+# --- END UNRAID ENDPOINTS ---
 
 
+# --- BEGIN IPMI ENDPOINTS ---
 @app.route("/ipmi/sensors")
 def ipmi_sensors():
 
@@ -82,6 +87,19 @@ def ipmi_sensors():
             password
         )
     )
+# --- END IPMI ENDPOINTS ---
+
+
+# --- BEGIN TRACEARR ENDPOINTS ---
+@app.route("/tracearr/resolution")
+def tracearr_resolution():
+    return jsonify(tracearr.get_resolution())
+
+
+@app.route("/tracearr/codecs")
+def tracearr_codecs():
+    return jsonify(tracearr.get_codecs())
+# --- END TRACEARR ENDPOINTS --- 
 
 
 if __name__ == "__main__":
