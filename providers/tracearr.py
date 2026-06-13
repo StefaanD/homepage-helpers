@@ -85,3 +85,7 @@ def get_resolution():
 
 def get_codecs():
     return call_tracearr("tracearr_codecs.json")
+
+
+def get_session_aggregates():
+    return call_tracearr("tracearr_session_aggregates.json")

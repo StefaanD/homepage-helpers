@@ -99,6 +99,11 @@ def tracearr_resolution():
 @app.route("/tracearr/codecs")
 def tracearr_codecs():
     return jsonify(tracearr.get_codecs())
+
+
+@app.route("/tracearr/session_aggregates")
+def tracearr_session_aggregates():
+    return jsonify(tracearr.get_session_aggregates ())
 # --- END TRACEARR ENDPOINTS --- 
 
 
