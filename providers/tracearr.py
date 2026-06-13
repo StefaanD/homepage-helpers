@@ -22,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 BASE = Path(__file__).parent.parent / "queries"
 
-CACHE_TTL = int(os.getenv("CACHE_TTL", "120"))
+CACHE_TTL = int(
+    os.getenv("CACHE_TTL", "120")
+)
 
 _cache = {}
 

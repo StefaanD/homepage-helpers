@@ -21,9 +21,7 @@ DB_PATH = os.getenv(
     "/config/tautulli.db"
 )
 
-CACHE_TTL = int(
-    os.getenv("CACHE_TTL", "120")
-)
+CACHE_TTL = int(os.getenv("CACHE_TTL", "120"))
 
 _cache = {}
 
