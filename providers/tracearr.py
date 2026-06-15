@@ -31,10 +31,15 @@ tracearr_bp = Blueprint(
     url_prefix="/tracearr"
 )
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).parent.parent
 
 SQL_DIR = BASE_DIR / "queries"
 CONFIG_DIR = BASE_DIR / "config"
+
+
+print(f"BASE_DIR={BASE_DIR}")
+print(f"SQL_DIR={SQL_DIR}")
+print(f"CONFIG_DIR={CONFIG_DIR}")
 
 
 def load_config():
