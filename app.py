@@ -1,9 +1,14 @@
 from flask import Flask, jsonify, request
-from providers import health, tautulli, unraid, ipmi, tracearr
+from tracearr import tracearr_bp
+from providers import health, tautulli, unraid, ipmi
 import os
 import logging
 
 app = Flask(__name__)
+
+
+# --- TRACEARR BLUEPRINT REGISTRATION ---
+app.register_blueprint(tracearr_bp)
 
 
 logging.basicConfig(
@@ -88,23 +93,6 @@ def ipmi_sensors():
         )
     )
 # --- END IPMI ENDPOINTS ---
-
-
-# --- BEGIN TRACEARR ENDPOINTS ---
-@app.route("/tracearr/resolution")
-def tracearr_resolution():
-    return jsonify(tracearr.get_resolution())
-
-
-@app.route("/tracearr/codecs")
-def tracearr_codecs():
-    return jsonify(tracearr.get_codecs())
-
-
-@app.route("/tracearr/session_aggregates")
-def tracearr_session_aggregates():
-    return jsonify(tracearr.get_session_aggregates ())
-# --- END TRACEARR ENDPOINTS --- 
 
 
 if __name__ == "__main__":

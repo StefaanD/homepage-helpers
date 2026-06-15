@@ -18,6 +18,11 @@ docker run -d \
   -e CACHE_TTL=120 \
   -v /mnt/user/appdata/tautulli:/config \
   -e TAUTULLI_DB=/config/tautulli.db \
+  -e TRACEARR_DB_HOST=192.168.66.5 \
+  -e TRACEARR_DB_PORT=5432 \
+  -e TRACEARR_DB_NAME=tracearr \
+  -e TRACEARR_DB_USER=tracearr \
+  -e TRACEARR_DB_PASSWORD=tracearr \
   -l homepage.group="Containers Rocinante" \
   -l homepage.icon="/icons/homepage-light.svg" \
   -l homepage.name="Homepage helpers" \

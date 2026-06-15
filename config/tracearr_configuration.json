@@ -1,0 +1,46 @@
+{
+  "include_unknown": true,
+
+  "sort_order": "count_desc",
+
+  "audio_channel_mapping": {
+    "0": "Unknown",
+    "1": "1.0",
+    "2": "2.0",
+    "3": "2.1",
+    "4": "4.0",
+    "5": "5.0",
+    "6": "5.1",
+    "7": "6.1",
+    "8": "7.1"
+  },
+
+  "codec_mapping": {
+    "DCA-MA": "DTS-HD MA",
+    "DCA": "DTS",
+    "TRUEHD": "Dolby TrueHD",
+    "EAC3": "Dolby Digital Plus",
+    "AC3": "Dolby Digital",
+    "HEVC": "H.265 / HEVC",
+    "H264": "H.264 / AVC",
+    "AV1": "AV1",
+    "VP9": "VP9",
+    "VC1": "VC-1",
+    "WMV3": "VC-1 (WMV3)",
+    "MPEG4": "MPEG-4",
+    "MSMPEG4V3": "MPEG-4 (MSMPEG4V3)",
+    "MPEG2VIDEO": "MPEG Video",
+    "unknown": "Unknown"
+  },
+
+  "resolution_mapping": {
+    "sd": "SD",
+    "480p": "480p",
+    "576p": "576p",
+    "720p": "720p",
+    "1080p": "1080p",
+    "2k": "2K",
+    "4k": "4K",
+    "unknown": "Unknown"
+  }
+}

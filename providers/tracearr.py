@@ -1,111 +1,353 @@
 """
 Tracearr provider for Homepage Helpers.
 
-Requires:
-- queries/tracearr_resolution.json
-- queries/tracearr_codecs.json
-- queries/tracearr_session_aggregates.json
-- connection to the Tracearr API (set TRACEARR_URL and TRACEARR_TOKEN env vars)
+Endpoints:
 
-Returns resolution and codec stats in JSON format for Homepage customapi widgets.
+/tracearr/resolutions/movies
+/tracearr/resolutions/tv
+/tracearr/video_codecs
+/tracearr/audio_codecs
+/tracearr/audio_channels
 """
 
 import json
 import os
-import time
-import logging
-import requests
 
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+import psycopg2
+import psycopg2.extras
 
-BASE = Path(__file__).parent.parent / "queries"
+from flask import Blueprint
+from flask import jsonify
 
-CACHE_TTL = int(
-    os.getenv("CACHE_TTL", "120")
+
+print("TRACEARR MODULE LOADED")
+
+
+tracearr_bp = Blueprint(
+    "tracearr",
+    __name__,
+    url_prefix="/tracearr"
 )
 
-_cache = {}
+BASE_DIR = Path(__file__).parent
+
+SQL_DIR = BASE_DIR / "queries"
+CONFIG_DIR = BASE_DIR / "config"
 
 
-def load_config(name):
-    with open(BASE / name) as f:
+def load_config():
+
+    config_file = (
+        CONFIG_DIR /
+        "tracearr_configuration.json"
+    )
+
+    with open(config_file, "r") as f:
         return json.load(f)
 
 
-def call_tracearr(config_file):
+CONFIG = load_config()
 
-    cache_key = config_file
 
-    now = time.time()
+# get a connection to the database using environment variables
+def get_connection():
 
-    if cache_key in _cache:
-
-        cached = _cache[cache_key]
-
-        if now - cached["time"] < CACHE_TTL:
-            logger.info(f"Tracearr cache hit: {cache_key}")
-            return cached["data"]
-
-    config = load_config(config_file)
-
-    url = os.getenv("TRACEARR_URL")
-    token = os.getenv("TRACEARR_TOKEN")
-
-    if not url:
-        raise ValueError("TRACEARR_URL not configured")
-
-    if not token:
-        raise ValueError("TRACEARR_TOKEN not configured")
-
-    logger.info(f"Fetching Tracearr data: {config['endpoint']}")
-
-    response = requests.get(
-        f"{url}{config['endpoint']}",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json"
-        },
-        timeout=30
+    return psycopg2.connect(
+        host=os.getenv(
+            "TRACEARR_DB_HOST",
+            "tracearr-supervised"
+        ),
+        port=os.getenv(
+            "TRACEARR_DB_PORT",
+            "5432"
+        ),
+        dbname=os.getenv(
+            "TRACEARR_DB_NAME",
+            "tracearr"
+        ),
+        user=os.getenv(
+            "TRACEARR_DB_USER",
+            "tracearr"
+        ),
+        password=os.getenv(
+            "TRACEARR_DB_PASSWORD",
+            "tracearr"
+        )
     )
 
-    response.raise_for_status()
 
-    data = response.json()
+# execute the SQL file and return the results as a list of dictionaries
+def execute_sql_file(filename):
 
-    _cache[cache_key] = {
-        "time": now,
-        "data": data
+    sql_file = SQL_DIR / filename
+
+    with open(sql_file, "r") as f:
+        sql = f.read()
+
+    conn = get_connection()
+
+    try:
+
+        with conn.cursor(
+            cursor_factory=psycopg2.extras.RealDictCursor
+        ) as cur:
+
+            cur.execute(sql)
+
+            return cur.fetchall()
+
+    finally:
+        conn.close()
+
+
+# normalize the codec using the mapping in the configuration
+def normalize_codec(codec):
+
+    mapping = CONFIG.get(
+        "codec_mapping",
+        {}
+    )
+
+    return mapping.get(codec, codec)
+
+
+# audio channels are stored as integers, but we want to display them as strings
+def normalize_audio_channels(value):
+
+    mapping = CONFIG.get(
+        "audio_channel_mapping",
+        {}
+    )
+
+    return mapping.get(
+        str(value),
+        str(value)
+    )
+
+
+# transform the rows from the database into a normalized format
+def transform_resolution_rows(rows):
+
+    include_unknown = CONFIG.get(
+        "include_unknown",
+        True
+    )
+
+    result = []
+
+    total = sum(
+        row["count"]
+        for row in rows
+    )
+
+    for row in rows:
+
+        resolution = row["resolution"]
+
+        if (
+            resolution == "unknown"
+            and not include_unknown
+        ):
+            continue
+
+        result.append({
+            "resolution": resolution,
+            "count": row["count"],
+            "percentage": round(
+                (
+                    row["count"] /
+                    total
+                ) * 100,
+                1
+            )
+        })
+
+    return result
+
+
+# transform the codec rows to include normalized codec and percentage
+def transform_codec_rows(rows):
+
+    include_unknown = CONFIG.get(
+        "include_unknown",
+        True
+    )
+
+    result = []
+
+    total = sum(
+        row["count"]
+        for row in rows
+    )
+
+    for row in rows:
+
+        codec = row["codec"]
+
+        if (
+            codec == "unknown"
+            and not include_unknown
+        ):
+            continue
+
+        result.append({
+            "codec": normalize_codec(codec),
+            "count": row["count"],
+            "percentage": round(
+                (
+                    row["count"] /
+                    total
+                ) * 100,
+                1
+            )
+        })
+
+    return result
+
+
+# transform the audio channel rows to include display value and percentage
+def transform_audio_channel_rows(rows):
+
+    include_unknown = CONFIG.get(
+        "include_unknown",
+        True
+    )
+
+    result = []
+
+    total = sum(
+        row["count"]
+        for row in rows
+    )
+
+    for row in rows:
+
+        channels = row["channels"]
+
+        if (
+            channels == 0
+            and not include_unknown
+        ):
+            continue
+
+        result.append({
+            "channels": channels,
+            "display": normalize_audio_channels(
+                channels
+            ),
+            "count": row["count"],
+            "percentage": round(
+                (
+                    row["count"] /
+                    total
+                ) * 100,
+                1
+            )
+        })
+
+    return result
+
+
+# normalize the response to include total and count
+def build_response(items):
+
+    return {
+        "total": len(items),
+        "count": sum(
+            item["count"]
+            for item in items
+        ),
+        "items": items
     }
 
-    data = response.json()
 
-    data["totalWatchTimeHuman"] = format_duration(
-        data["totalWatchTimeMs"]
+@tracearr_bp.route(
+    "/resolutions/movies"
+)
+def resolutions_movies():
+
+    rows = execute_sql_file(
+        "tracearr_resolutions_movies.sql"
     )
 
-    return data
+    items = transform_resolution_rows(
+        rows
+    )
+
+    return jsonify(
+        build_response(items)
+    )
 
 
-def get_resolution():
-    return call_tracearr("tracearr_resolution.json")
+@tracearr_bp.route(
+    "/resolutions/tv"
+)
+def resolutions_tv():
+
+    rows = execute_sql_file(
+        "tracearr_resolutions_tv.sql"
+    )
+
+    items = transform_resolution_rows(
+        rows
+    )
+
+    return jsonify(
+        build_response(items)
+    )
 
 
-def get_codecs():
-    return call_tracearr("tracearr_codecs.json")
+@tracearr_bp.route(
+    "/video_codecs"
+)
+def video_codecs():
+
+    rows = execute_sql_file(
+        "tracearr_video_codecs.sql"
+    )
+
+    items = transform_codec_rows(
+        rows
+    )
+
+    return jsonify(
+        build_response(items)
+    )
 
 
-def get_session_aggregates():
-    return call_tracearr("tracearr_session_aggregates.json")
+@tracearr_bp.route(
+    "/audio_codecs"
+)
+def audio_codecs():
+
+    rows = execute_sql_file(
+        "tracearr_audio_codecs.sql"
+    )
+
+    items = transform_codec_rows(
+        rows
+    )
+
+    return jsonify(
+        build_response(items)
+    )
 
 
-# --- BEGIN DURATION CALCULATION ---
-def format_duration(ms):
-    seconds = ms // 1000
+@tracearr_bp.route(
+    "/audio_channels"
+)
+def audio_channels():
 
-    days = seconds // 86400
-    hours = (seconds % 86400) // 3600
+    rows = execute_sql_file(
+        "tracearr_audio_channels.sql"
+    )
 
-    return f"{days}d {hours}h"
-# --- END DURATION CALCULATION ---
+    items = transform_audio_channel_rows(
+        rows
+    )
+
+    return jsonify(
+        build_response(items)
+    )
