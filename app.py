@@ -1,8 +1,9 @@
+import os
+import logging
+
 from flask import Flask, jsonify, request
 from providers import health, tautulli, unraid, ipmi, tracearr
 from tracearr import tracearr_bp
-import os
-import logging
 
 app = Flask(__name__)
 
