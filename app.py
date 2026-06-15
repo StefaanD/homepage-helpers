@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
+from providers import health, tautulli, unraid, ipmi, tracearr
 from tracearr import tracearr_bp
-from providers import health, tautulli, unraid, ipmi
 import os
 import logging
 
