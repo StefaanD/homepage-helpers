@@ -12,6 +12,7 @@ Returns system stats and available updates in JSON format for Homepage customapi
 import json
 import requests
 from pathlib import Path
+import os
 import time
 import logging
 
