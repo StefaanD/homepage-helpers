@@ -12,6 +12,7 @@ Endpoints:
 
 import json
 import os
+import logging
 
 from pathlib import Path
 
@@ -22,7 +23,7 @@ from flask import Blueprint
 from flask import jsonify
 
 
-print("TRACEARR MODULE LOADED")
+logger = logging.getLogger(__name__)
 
 
 tracearr_bp = Blueprint(
@@ -35,11 +36,6 @@ BASE_DIR = Path(__file__).parent.parent
 
 SQL_DIR = BASE_DIR / "queries"
 CONFIG_DIR = BASE_DIR / "config"
-
-
-print(f"BASE_DIR={BASE_DIR}")
-print(f"SQL_DIR={SQL_DIR}")
-print(f"CONFIG_DIR={CONFIG_DIR}")
 
 
 def load_config():
@@ -350,6 +346,24 @@ def audio_channels():
     )
 
     items = transform_audio_channel_rows(
+        rows
+    )
+
+    return jsonify(
+        build_response(items)
+    )
+
+
+@tracearr_bp.route(
+    "/music_codecs"
+)
+def music_codecs():
+
+    rows = execute_sql_file(
+        "tracearr_music_codecs.sql"
+    )
+
+    items = transform_codec_rows(
         rows
     )
 
