@@ -440,7 +440,7 @@ def resolutions_movies():
     )
 
     rows = execute_sql_file(
-        "tracearr_resolution_movies.sql"
+        "tracearr_resolutions_movies.sql"
     )
 
     items = transform_resolution_rows(
@@ -474,7 +474,7 @@ def resolutions_tv():
     )
 
     rows = execute_sql_file(
-        "tracearr_resolution_tv.sql"
+        "tracearr_resolutions_tv.sql"
     )
 
     items = transform_resolution_rows(
@@ -505,6 +505,10 @@ def video_codecs():
 
     logger.info(
         "Fetching video codec statistics"
+    )
+
+    rows = execute_sql_file(
+        "tracearr_video_codecs.sql"
     )
 
     items = transform_codec_rows(
@@ -617,12 +621,12 @@ def music_codecs():
         items
     )
 
-    logger.info(
-        f"Returning {len(items)} music codec statistics"
-    )
-
     items = apply_limits(
         items
+    )
+
+    logger.info(
+        f"Returning {len(items)} music codec statistics"
     )
 
     return jsonify(
