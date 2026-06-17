@@ -2,6 +2,8 @@
   "include_unknown": true,
 
   "sort_order": "count_desc",
+  "top_n": 8,
+  "group_other": true,
 
   "audio_channel_mapping": {
     "0": "Unknown",

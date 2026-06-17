@@ -37,6 +37,144 @@ BASE_DIR = Path(__file__).parent.parent
 SQL_DIR = BASE_DIR / "queries"
 CONFIG_DIR = BASE_DIR / "config"
 
+# sort the items based on the configuration
+def sort_items(items):
+
+    sort_order = CONFIG.get(
+        "sort_order",
+        "count_desc"
+    )
+
+    logger.info(
+        f"Sorting items using '{sort_order}'"
+    )
+
+    match sort_order:
+
+        case "count_desc":
+            return sorted(
+                items,
+                key=lambda item: item["count"],
+                reverse=True
+            )
+
+        case "count_asc":
+            return sorted(
+                items,
+                key=lambda item: item["count"]
+            )
+
+        case "alphabetical":
+            return sorted(
+                items,
+                key=lambda item: item["label"].lower()
+            )
+
+        case _:
+
+            logger.warning(
+                f"Invalid sort_order '{sort_order}', falling back to count_desc"
+            )
+
+            return sorted(
+                items,
+                key=lambda item: item["count"],
+                reverse=True
+            )
+
+
+# apply limits to the items based on the configuration
+def apply_limits(items):
+
+    top_n = CONFIG.get(
+        "top_n",
+        10
+    )
+
+    group_other = CONFIG.get(
+        "group_other",
+        True
+    )
+
+    logger.info(
+        f"Applying limits: top_n={top_n}, group_other={group_other}"
+    )
+
+    if not isinstance(top_n, int):
+
+        logger.warning(
+            f"Invalid top_n value '{top_n}', using 10"
+        )
+
+        top_n = 10
+
+    if top_n <= 0:
+
+        logger.warning(
+            f"Invalid top_n value '{top_n}', using 10"
+        )
+
+        top_n = 10
+
+    if len(items) <= top_n:
+
+        logger.info(
+            "No limiting required"
+        )
+
+        return items
+
+    if not group_other:
+
+        logger.info(
+            f"Truncating list to first {top_n} items"
+        )
+
+        return items[:top_n]
+    
+    if group_other and top_n < 2:
+
+        logger.warning(
+            f"top_n={top_n} too small when group_other enabled, using 2"
+        )
+
+        top_n = 2
+
+    if group_other:
+
+        visible_count = top_n - 1
+
+    else:
+
+        visible_count = top_n
+
+    visible_items = items[:visible_count]
+
+    other_items = items[visible_count:]
+
+    other_count = sum(
+        item["count"]
+        for item in other_items
+    )
+
+    other_count = sum(
+        item["count"]
+        for item in other_items
+    )
+
+    if other_count > 0:
+
+        visible_items.append({
+            "label": "Other",
+            "count": other_count
+        })
+
+        logger.info(
+            f"Grouped {len(other_items)} items into Other ({other_count})"
+        )
+
+    return visible_items
+
 
 def load_config():
 
@@ -82,6 +220,10 @@ def get_connection():
 # execute the SQL file and return the results as a list of dictionaries
 def execute_sql_file(filename):
 
+    logger.info(
+        f"Executing SQL query: {filename}"
+    )
+
     sql_file = SQL_DIR / filename
 
     with open(sql_file, "r") as f:
@@ -98,6 +240,10 @@ def execute_sql_file(filename):
             cur.execute(sql)
 
             return cur.fetchall()
+        
+        logger.info(
+            f"Query returned {len(rows)} rows"
+        )
 
     finally:
         conn.close()
@@ -130,6 +276,10 @@ def normalize_audio_channels(value):
 
 # transform the rows from the database into a normalized format
 def transform_resolution_rows(rows):
+
+    logger.info(
+        f"Normalizing {len(rows)} resolution rows"
+    )
 
     include_unknown = CONFIG.get(
         "include_unknown",
@@ -171,6 +321,10 @@ def transform_resolution_rows(rows):
 # transform the codec rows to include normalized codec and percentage
 def transform_codec_rows(rows):
 
+    logger.info(
+        f"Normalizing {len(rows)} codec rows"
+    )
+
     include_unknown = CONFIG.get(
         "include_unknown",
         True
@@ -205,11 +359,19 @@ def transform_codec_rows(rows):
             )
         })
 
+    logger.info(
+        f"Normalized to {len(items)} codec items"
+    )
+
     return result
 
 
 # transform the audio channel rows to include display value and percentage
 def transform_audio_channel_rows(rows):
+
+    logger.info(
+        f"Normalizing {len(rows)} audio channel rows"
+    )
 
     include_unknown = CONFIG.get(
         "include_unknown",
@@ -254,6 +416,10 @@ def transform_audio_channel_rows(rows):
 # normalize the response to include total and count
 def build_response(items):
 
+    logger.info(
+        f"Building response with {len(items)} items"
+    )
+
     return {
         "total": len(items),
         "count": sum(
@@ -269,12 +435,28 @@ def build_response(items):
 )
 def resolutions_movies():
 
+    logger.info(
+        "Fetching resolution statistics for movies"
+    )
+
     rows = execute_sql_file(
-        "tracearr_resolutions_movies.sql"
+        "tracearr_resolution_movies.sql"
     )
 
     items = transform_resolution_rows(
         rows
+    )
+
+    items = sort_items(
+        items
+    )
+
+    items = apply_limits(
+        items
+    )
+
+    logger.info(
+        f"Returning {len(items)} resolution items for movies"
     )
 
     return jsonify(
@@ -287,12 +469,28 @@ def resolutions_movies():
 )
 def resolutions_tv():
 
+    logger.info(
+        "Fetching resolution statistics for TV"
+    )
+
     rows = execute_sql_file(
-        "tracearr_resolutions_tv.sql"
+        "tracearr_resolution_tv.sql"
     )
 
     items = transform_resolution_rows(
         rows
+    )
+
+    items = sort_items(
+        items
+    )
+
+    items = apply_limits(
+        items
+    )
+
+    logger.info(
+        f"Returning {len(items)} resolution items for TV"
     )
 
     return jsonify(
@@ -305,12 +503,24 @@ def resolutions_tv():
 )
 def video_codecs():
 
-    rows = execute_sql_file(
-        "tracearr_video_codecs.sql"
+    logger.info(
+        "Fetching video codec statistics"
     )
 
     items = transform_codec_rows(
         rows
+    )
+
+    items = sort_items(
+        items
+    )
+
+    items = apply_limits(
+        items
+    )
+
+    logger.info(
+        f"Returning {len(items)} video codec statistics"
     )
 
     return jsonify(
@@ -323,12 +533,28 @@ def video_codecs():
 )
 def audio_codecs():
 
+    logger.info(
+        "Fetching audio codec statistics"
+    )
+
     rows = execute_sql_file(
         "tracearr_audio_codecs.sql"
     )
 
     items = transform_codec_rows(
         rows
+    )
+
+    items = sort_items(
+        items
+    )
+
+    items = apply_limits(
+        items
+    )
+
+    logger.info(
+        f"Returning {len(items)} audio codec statistics"
     )
 
     return jsonify(
@@ -341,12 +567,28 @@ def audio_codecs():
 )
 def audio_channels():
 
+    logger.info(
+        "Fetching audio channel statistics"
+    )
+
     rows = execute_sql_file(
         "tracearr_audio_channels.sql"
     )
 
     items = transform_audio_channel_rows(
         rows
+    )
+
+    items = sort_items(
+        items
+    )
+
+    items = apply_limits(
+        items
+    )
+
+    logger.info(
+        f"Returning {len(items)} audio channel statistics"
     )
 
     return jsonify(
@@ -359,12 +601,28 @@ def audio_channels():
 )
 def music_codecs():
 
+    logger.info(
+        "Fetching music codec statistics"
+    )
+
     rows = execute_sql_file(
         "tracearr_music_codecs.sql"
     )
 
     items = transform_codec_rows(
         rows
+    )
+
+    items = sort_items(
+        items
+    )
+
+    logger.info(
+        f"Returning {len(items)} music codec statistics"
+    )
+
+    items = apply_limits(
+        items
     )
 
     return jsonify(
