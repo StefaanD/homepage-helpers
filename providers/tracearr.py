@@ -360,7 +360,7 @@ def transform_codec_rows(rows):
         })
 
     logger.info(
-        f"Normalized to {len(items)} codec items"
+        f"Normalized to {len(result)} codec items"
     )
 
     return result
