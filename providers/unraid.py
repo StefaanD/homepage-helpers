@@ -6,65 +6,157 @@ Requires:
 - queries/unraid_updates.json
 - Unraid API key and CSRF token (set UNRAID_URL, UNRAID_API_KEY, UNRAID_CSRF_TOKEN env vars)
 
-Returns system stats and available updates in JSON format for Homepage customapi widgets.
+Endpoints:
+/unraid/stats
+/unraid/updates
 """
 
+# -----------------------------------------------------------------------------
+# Imports
+# -----------------------------------------------------------------------------
+
 import json
-import requests
-from pathlib import Path
 import os
 import time
 import logging
 
+from pathlib import Path
+
+import requests
+
+from flask import Blueprint
+from flask import jsonify
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
 
 logger = logging.getLogger(__name__)
 
+# -----------------------------------------------------------------------------
+# Blueprint
+# -----------------------------------------------------------------------------
 
-BASE = Path(__file__).parent.parent / "queries"
+unraid_bp = Blueprint(
+    "unraid",
+    __name__,
+    url_prefix="/unraid"
+)
+
+
+# -----------------------------------------------------------------------------
+# Paths and config
+# -----------------------------------------------------------------------------
+
+BASE_DIR = Path(__file__).parent.parent / "config"
 
 CACHE_TTL = int(
-    os.getenv("CACHE_TTL", "120")
+    os.getenv(
+        "CACHE_TTL",
+        "120"
+    )
 )
+
+UNRAID_URL = os.getenv(
+    "UNRAID_URL"
+)
+
+UNRAID_API_KEY = os.getenv(
+    "UNRAID_API_KEY"
+)
+
+UNRAID_CSRF_TOKEN = os.getenv(
+    "UNRAID_CSRF_TOKEN"
+)
+
+
+required_vars = {
+    "UNRAID_URL": UNRAID_URL,
+    "UNRAID_API_KEY": UNRAID_API_KEY,
+    "UNRAID_CSRF_TOKEN": UNRAID_CSRF_TOKEN
+}
+
+missing = [
+    key
+    for key, value in required_vars.items()
+    if not value
+]
+
+if missing:
+
+    logger.warning(
+        "Missing Unraid environment variables: %s",
+        ", ".join(missing)
+    )
+
 
 _cache = {}
 
 
-def load_query(filename):
-    with open(BASE / filename) as f:
+# -----------------------------------------------------------------------------
+# Query loader
+# -----------------------------------------------------------------------------
+
+def load_config(filename):
+
+    with open(BASE_DIR / filename, "r", encoding="utf-8") as f:
+
         return json.load(f)
 
 
-def graphql_call(url, api_key, csrf_token, query_file):
-    cache_key = f"{url}:{query_file}"
+# -----------------------------------------------------------------------------
+# GraphQL helper
+# -----------------------------------------------------------------------------
+
+def graphql_call(query_file):
+
+    cache_key = f"{UNRAID_URL}:{query_file}"
+
     now = time.time()
 
     if cache_key in _cache:
+
         cached = _cache[cache_key]
+
         if now - cached["time"] < CACHE_TTL:
-            logger.info("Unraid cache hit")
+
+            logger.info(
+                "Unraid cache hit: %s",
+                query_file
+            )
+
             return cached["data"]
 
     headers = {
         "Content-Type": "application/json",
         "apollo-require-preflight": "true",
-        "x-api-key": api_key,
-        "x-csrf-token": csrf_token
+        "x-api-key": UNRAID_API_KEY,
+        "x-csrf-token": UNRAID_CSRF_TOKEN
     }
 
-    logger.info(f"Fetching Unraid data using {query_file}")
+    logger.info(
+        "Fetching Unraid data: %s",
+        query_file
+    )
 
     response = requests.post(
-        url,
-        json=load_query(query_file),
+        UNRAID_URL,
+        json=load_config(query_file),
         headers=headers,
         timeout=10
     )
 
     try:
+
         response.raise_for_status()
 
     except Exception as e:
-        logger.error(f"Unraid request failed: {e}")
+
+        logger.error(
+            "Unraid GraphQL request failed: %s",
+            e
+        )
+
         raise
 
     data = response.json()
@@ -77,33 +169,76 @@ def graphql_call(url, api_key, csrf_token, query_file):
     return data
 
 
-def get_updates(url, api_key, csrf_token):
+# -----------------------------------------------------------------------------
+# Business logic
+# -----------------------------------------------------------------------------
+
+def get_updates():
+
     data = graphql_call(
-        url,
-        api_key,
-        csrf_token,
         "unraid_updates.json"
     )
 
-    containers = data["data"]["docker"]["containerUpdateStatuses"]
+    containers = (
+        data["data"]["docker"]["containerUpdateStatuses"]
+    )
 
-    updates = [
+    available_updates = [
         c["name"]
         for c in containers
         if c["updateStatus"] == "UPDATE_AVAILABLE"
     ]
 
+    logger.info(
+        "Found %d available updates",
+        len(available_updates)
+    )
+
     return {
-        "count": len(updates),
-        "updates": updates,
-        "text": " • ".join(updates) if updates else "Alles up-to-date"
+        "count": len(available_updates),
+        "updates": available_updates,
+        "text": (
+            " • ".join(available_updates)
+            if available_updates
+            else "Alles up-to-date"
+        )
     }
 
 
-def get_stats(url, api_key, csrf_token):
+def get_stats():
+
     return graphql_call(
-        url,
-        api_key,
-        csrf_token,
         "unraid_stats.json"
+    )
+
+
+# -----------------------------------------------------------------------------
+# Routes
+# -----------------------------------------------------------------------------
+
+@unraid_bp.route(
+    "/updates"
+)
+def updates():
+
+    logger.info(
+        "Unraid updates requested"
+    )
+
+    return jsonify(
+        get_updates()
+    )
+
+
+@unraid_bp.route(
+    "/stats"
+)
+def stats():
+
+    logger.info(
+        "Unraid stats requested"
+    )
+
+    return jsonify(
+        get_stats()
     )

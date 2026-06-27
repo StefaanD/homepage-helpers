@@ -1,112 +1,131 @@
-from flask import Flask, jsonify, request
+"""
+Main script for Homepage Helpers.
 
-from providers import health
-from providers import tautulli
-from providers import unraid
-from providers import ipmi
+Requires:
 
-from providers.tracearr import tracearr_bp
+Endpoints:
+"""
 
 import os
 import logging
 
-from flask import Flask, jsonify, request
+from flask import Flask
+from flask import jsonify
+
+from logging_config import configure_logging
+from config_manager import ensure_config_files
+
+from providers.endpoints import endpoints_bp
+from providers.health import health_bp
+from providers.ipmi import ipmi_bp
+from providers.tautulli import tautulli_bp
+from providers.tracearr import tracearr_bp
+from providers.unraid import unraid_bp
 
 
-app = Flask(__name__)
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
 
+configure_logging()
 
-app.register_blueprint(tracearr_bp)
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-)
 
 logger = logging.getLogger(__name__)
 
 
-PORT = int(os.getenv("PORT", "8383"))
+# -----------------------------------------------------------------------------
+# Flask
+# -----------------------------------------------------------------------------
 
-# --- BEGIN HEALTH ENDPOINT ---
-@app.route("/health")
-def health_check():
-    return jsonify(
-        health.get_health()
+ensure_config_files()
+
+
+# -----------------------------------------------------------------------------
+# Flask
+# -----------------------------------------------------------------------------
+
+app = Flask(__name__)
+
+app.json.sort_keys = False
+
+
+# -----------------------------------------------------------------------------
+# Set app name and version, also used by endpoint.py
+# -----------------------------------------------------------------------------
+
+app.config["APP_NAME"] = "Homepage Helpers"
+app.config["APP_VERSION"] = "0.2.0"
+
+app.register_blueprint(
+    endpoints_bp
+)
+
+app.register_blueprint(
+    health_bp
+)
+
+app.register_blueprint(
+    ipmi_bp
+)
+
+app.register_blueprint(
+    tautulli_bp
+)
+
+app.register_blueprint(
+    tracearr_bp
+)
+
+app.register_blueprint(
+    unraid_bp
+)
+
+PORT = int(
+    os.getenv(
+        "PORT",
+        "8383"
     )
-# --- END HEALTH ENDPOINT ---
+)
+
+logger.info(
+    "Homepage Helpers started on port %s",
+    PORT
+)
 
 
-# --- BEGIN TAUTULLI ENDPOINTS ---
-@app.route("/tautulli/stats")
-def tautulli_stats():
-    aggregate = request.args.get("aggregate", "on").lower()
+@app.route("/")
+def root():
 
-    return jsonify(
-        tautulli.get_stats(
-            aggregate=(aggregate != "off")
-        )
-    )
-# --- END TAUTULLI ENDPOINTS ---
-
-
-# --- UNRAID ENDPOINTS ---
-@app.route("/unraid/updates")
-def unraid_updates():
-    url = request.args.get("url")
-    api_key = request.args.get("apikey")
-    csrf_token = request.args.get("csrftoken")
-
-    if not all([url, api_key, csrf_token]):
-        return jsonify({
-            "error": "missing url, apikey or csrftoken"
-        }), 400
-
-    return jsonify(
-        unraid.get_updates(url, api_key, csrf_token)
+    logger.info(
+        "Root endpoint requested"
     )
 
-
-@app.route("/unraid/stats")
-def unraid_stats():
-    url = request.args.get("url")
-    api_key = request.args.get("apikey")
-    csrf_token = request.args.get("csrftoken")
-
     return jsonify(
-        unraid.get_stats(url, api_key, csrf_token)
+        {
+            "application": "Homepage Helpers",
+            "version": "0.2.0",
+            "providers": [
+                "health",
+                "tracearr",
+                "unraid",
+                "ipmi",
+                "endpoints"
+            ],
+            "status": "running"
+        }
     )
-# --- END UNRAID ENDPOINTS ---
-
-
-# --- BEGIN IPMI ENDPOINTS ---
-@app.route("/ipmi/sensors")
-def ipmi_sensors():
-
-    host = request.args.get("host")
-    username = request.args.get("username")
-    password = request.args.get("password")
-
-    if not all([host, username, password]):
-        return jsonify({
-            "error": "missing host, username or password"
-        }), 400
-
-    return jsonify(
-        ipmi.get_sensors(
-            host,
-            username,
-            password
-        )
-    )
-# --- END IPMI ENDPOINTS ---
 
 
 if __name__ == "__main__":
 
     logger.info(
-        f"Starting Homepage Helpers on port {PORT}"
+        "Starting Homepage Helpers on port %s",
+        PORT
+    )
+
+    logger.info(
+        "JSON sort keys: %s",
+        app.json.sort_keys
     )
 
     app.run(

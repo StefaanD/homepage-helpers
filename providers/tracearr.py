@@ -1,8 +1,16 @@
 """
 Tracearr provider for Homepage Helpers.
 
-Endpoints:
+Requires:
+- config/tracearr_configuration.json
+- Tracearr database information (set
+    TRACEARR_DB_HOST
+    TRACEARR_DB_PORT
+    TRACEARR_DB_NAME
+    TRACEARR_DB_USER
+    TRACEARR_DB_PASSWORD env vars)
 
+Endpoints:
 /tracearr/resolutions/movies
 /tracearr/resolutions/tv
 /tracearr/video_codecs
@@ -10,9 +18,14 @@ Endpoints:
 /tracearr/audio_channels
 """
 
+# -----------------------------------------------------------------------------
+# Imports
+# -----------------------------------------------------------------------------
+
 import json
-import os
 import logging
+import os
+import time
 
 from pathlib import Path
 
@@ -22,9 +35,15 @@ import psycopg2.extras
 from flask import Blueprint
 from flask import jsonify
 
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
 
 logger = logging.getLogger(__name__)
 
+# -----------------------------------------------------------------------------
+# Blueprint
+# -----------------------------------------------------------------------------
 
 tracearr_bp = Blueprint(
     "tracearr",
@@ -32,171 +51,44 @@ tracearr_bp = Blueprint(
     url_prefix="/tracearr"
 )
 
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+
 BASE_DIR = Path(__file__).parent.parent
 
 SQL_DIR = BASE_DIR / "queries"
-CONFIG_DIR = BASE_DIR / "config"
 
-# sort the items based on the configuration
-def sort_items(items):
+CONFIG_PATH = os.getenv(
+    "TRACEARR_CONFIG",
+    "/config/tracearr_configuration.json"
+)
 
-    sort_order = CONFIG.get(
-        "sort_order",
-        "count_desc"
-    )
-
-    logger.info(
-        f"Sorting items using '{sort_order}'"
-    )
-
-    match sort_order:
-
-        case "count_desc":
-            return sorted(
-                items,
-                key=lambda item: item["count"],
-                reverse=True
-            )
-
-        case "count_asc":
-            return sorted(
-                items,
-                key=lambda item: item["count"]
-            )
-
-        case "alphabetical":
-            return sorted(
-                items,
-                key=lambda item: item["label"].lower()
-            )
-
-        case _:
-
-            logger.warning(
-                f"Invalid sort_order '{sort_order}', falling back to count_desc"
-            )
-
-            return sorted(
-                items,
-                key=lambda item: item["count"],
-                reverse=True
-            )
-
-
-# apply limits to the items based on the configuration
-def apply_limits(items):
-
-    top_n = CONFIG.get(
-        "top_n",
-        10
-    )
-
-    group_other = CONFIG.get(
-        "group_other",
-        True
-    )
-
-    logger.info(
-        f"Applying limits: top_n={top_n}, group_other={group_other}"
-    )
-
-    if not isinstance(top_n, int):
-
-        logger.warning(
-            f"Invalid top_n value '{top_n}', using 10"
-        )
-
-        top_n = 10
-
-    if top_n <= 0:
-
-        logger.warning(
-            f"Invalid top_n value '{top_n}', using 10"
-        )
-
-        top_n = 10
-
-    if len(items) <= top_n:
-
-        logger.info(
-            "No limiting required"
-        )
-
-        return items
-
-    if not group_other:
-
-        logger.info(
-            f"Truncating list to first {top_n} items"
-        )
-
-        return items[:top_n]
-    
-    if group_other and top_n < 2:
-
-        logger.warning(
-            f"top_n={top_n} too small when group_other enabled, using 2"
-        )
-
-        top_n = 2
-
-    if group_other:
-
-        visible_count = top_n - 1
-
-    else:
-
-        visible_count = top_n
-
-    visible_items = items[:visible_count]
-
-    other_items = items[visible_count:]
-
-    other_count = sum(
-        item["count"]
-        for item in other_items
-    )
-
-    other_count = sum(
-        item["count"]
-        for item in other_items
-    )
-
-    if other_count > 0:
-
-        visible_items.append({
-            "label": "Other",
-            "count": other_count
-        })
-
-        logger.info(
-            f"Grouped {len(other_items)} items into Other ({other_count})"
-        )
-
-    return visible_items
-
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
 
 def load_config():
 
-    config_file = (
-        CONFIG_DIR /
-        "tracearr_configuration.json"
-    )
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
 
-    with open(config_file, "r") as f:
+        logger.info(
+            "Loading Tracearr configuration from %s",
+            CONFIG_PATH
+        )
+
         return json.load(f)
 
+# -----------------------------------------------------------------------------
+# Database
+# -----------------------------------------------------------------------------
 
-CONFIG = load_config()
-
-
-# get a connection to the database using environment variables
 def get_connection():
 
     return psycopg2.connect(
         host=os.getenv(
             "TRACEARR_DB_HOST",
-            "tracearr-supervised"
+            "tracearr-db"
         ),
         port=os.getenv(
             "TRACEARR_DB_PORT",
@@ -211,22 +103,26 @@ def get_connection():
             "tracearr"
         ),
         password=os.getenv(
-            "TRACEARR_DB_PASSWORD",
-            "tracearr"
+            "TRACEARR_DB_PASSWORD"
         )
     )
 
 
-# execute the SQL file and return the results as a list of dictionaries
 def execute_sql_file(filename):
 
     logger.info(
-        f"Executing SQL query: {filename}"
+        "Executing SQL query: %s",
+        filename
     )
 
     sql_file = SQL_DIR / filename
 
-    with open(sql_file, "r") as f:
+    with open(
+        sql_file,
+        "r",
+        encoding="utf-8"
+    ) as f:
+
         sql = f.read()
 
     conn = get_connection()
@@ -237,33 +133,50 @@ def execute_sql_file(filename):
             cursor_factory=psycopg2.extras.RealDictCursor
         ) as cur:
 
+            start = time.perf_counter()
+
             cur.execute(sql)
 
-            return cur.fetchall()
-        
-        logger.info(
-            f"Query returned {len(rows)} rows"
-        )
+            rows = cur.fetchall()
+
+            duration = round(
+                time.perf_counter() - start,
+                3
+            )
+
+            logger.info(
+                "Query returned %d rows in %.3f seconds",
+                len(rows),
+                duration
+            )
+
+            return rows
 
     finally:
+
         conn.close()
 
 
-# normalize the codec using the mapping in the configuration
-def normalize_codec(codec):
+# -----------------------------------------------------------------------------
+# Normalization
+# -----------------------------------------------------------------------------
 
-    mapping = CONFIG.get(
+def normalize_codec(codec, config):
+
+    mapping = config.get(
         "codec_mapping",
         {}
     )
 
-    return mapping.get(codec, codec)
+    return mapping.get(
+        codec,
+        codec
+    )
 
 
-# audio channels are stored as integers, but we want to display them as strings
-def normalize_audio_channels(value):
+def normalize_audio_channels(value, config):
 
-    mapping = CONFIG.get(
+    mapping = config.get(
         "audio_channel_mapping",
         {}
     )
@@ -274,24 +187,23 @@ def normalize_audio_channels(value):
     )
 
 
-# transform the rows from the database into a normalized format
-def transform_resolution_rows(rows):
+# -----------------------------------------------------------------------------
+# Transformation
+# -----------------------------------------------------------------------------
 
-    logger.info(
-        f"Normalizing {len(rows)} resolution rows"
-    )
+def transform_resolution_rows(rows, config):
 
-    include_unknown = CONFIG.get(
+    include_unknown = config.get(
         "include_unknown",
         True
     )
-
-    result = []
 
     total = sum(
         row["count"]
         for row in rows
     )
+
+    items = []
 
     for row in rows:
 
@@ -303,39 +215,31 @@ def transform_resolution_rows(rows):
         ):
             continue
 
-        result.append({
+        items.append({
             "resolution": resolution,
             "count": row["count"],
             "percentage": round(
-                (
-                    row["count"] /
-                    total
-                ) * 100,
+                row["count"] / total * 100,
                 1
             )
         })
 
-    return result
+    return items
 
 
-# transform the codec rows to include normalized codec and percentage
-def transform_codec_rows(rows):
+def transform_codec_rows(rows, config):
 
-    logger.info(
-        f"Normalizing {len(rows)} codec rows"
-    )
-
-    include_unknown = CONFIG.get(
+    include_unknown = config.get(
         "include_unknown",
         True
     )
-
-    result = []
 
     total = sum(
         row["count"]
         for row in rows
     )
+
+    items = []
 
     for row in rows:
 
@@ -347,43 +251,31 @@ def transform_codec_rows(rows):
         ):
             continue
 
-        result.append({
-            "codec": normalize_codec(codec),
+        items.append({
+            "codec": normalize_codec(codec, config),
             "count": row["count"],
             "percentage": round(
-                (
-                    row["count"] /
-                    total
-                ) * 100,
+                row["count"] / total * 100,
                 1
             )
         })
 
-    logger.info(
-        f"Normalized to {len(result)} codec items"
-    )
-
-    return result
+    return items
 
 
-# transform the audio channel rows to include display value and percentage
-def transform_audio_channel_rows(rows):
+def transform_audio_channel_rows(rows, config):
 
-    logger.info(
-        f"Normalizing {len(rows)} audio channel rows"
-    )
-
-    include_unknown = CONFIG.get(
+    include_unknown = config.get(
         "include_unknown",
         True
     )
-
-    result = []
 
     total = sum(
         row["count"]
         for row in rows
     )
+
+    items = []
 
     for row in rows:
 
@@ -395,30 +287,400 @@ def transform_audio_channel_rows(rows):
         ):
             continue
 
-        result.append({
+        items.append({
             "channels": channels,
-            "display": normalize_audio_channels(
-                channels
-            ),
+            "display": normalize_audio_channels(channels, config),
             "count": row["count"],
             "percentage": round(
-                (
-                    row["count"] /
-                    total
-                ) * 100,
+                row["count"] / total * 100,
                 1
             )
         })
 
-    return result
+    return items
 
 
-# normalize the response to include total and count
-def build_response(items):
+def transform_stats_rows(rows, config):
+
+    if not rows:
+        return []
+
+    row = rows[0]
+
+    return [
+        {
+            "label": "Total items",
+            "value": row["total_items"]
+        },
+        {
+            "label": "Total size",
+            "value": format_bytes(
+                 row["total_size_bytes"]
+            )
+        },
+        {
+            "label": "Movies",
+            "value": row["movie_count"]
+        },
+        {
+            "label": "TV episodes",
+            "value": row["episode_count"]
+        },
+        {
+            "label": "Music",
+            "value": row["music_count"]
+        },
+        {
+            "label": "4K files",
+            "value": row["count_4k"]
+        },
+        {
+            "label": "1080p files",
+            "value": row["count_1080p"]
+        },
+        {
+            "label": "720p files",
+            "value": row["count_720p"]
+        },
+        {
+            "label": "SD files",
+            "value": row["count_sd"]
+        }
+    ]
+
+
+def transform_history_stats_rows(
+    rows,
+    _config
+):
+    """
+    Transform history aggregate statistics.
+    """
+
+    if not rows:
+        return []
+
+    row = rows[0]
+
+    return [
+        {
+            "label": "Plays",
+            "value": row["play_count"]
+        },
+        {
+            "label": "Watch time",
+            "value": format_duration(
+                row["total_watch_time_ms"]
+            ),
+            "milliseconds": row["total_watch_time_ms"]
+        },
+        {
+            "label": "Unique users",
+            "value": row["unique_users"]
+        },
+        {
+            "label": "Unique titles",
+            "value": row["unique_content"]
+        }
+    ]
+
+
+def transform_value_rows(
+    rows,
+    _config,
+    field_name
+):
+    """
+    Transform simple value/count rows.
+    """
+
+    items = []
+
+    for row in rows:
+
+        items.append({
+            field_name: row["value"],
+            "count": row["count"]
+        })
+
+    return items
+
+
+def transform_country_rows(
+    rows,
+    config
+):
+    """
+    Transform country history rows.
+    """
+
+    return [
+        {
+            "country": row["value"],
+            "count": row["count"]
+        }
+        for row in rows
+        if row["value"]
+    ]
+
+
+def transform_device_rows(
+    rows,
+    config
+):
+    """
+    Transform device history rows.
+    """
+
+    return [
+        {
+            "device": row["value"],
+            "count": row["count"]
+        }
+        for row in rows
+        if row["value"]
+    ]
+
+
+def transform_platform_rows(
+    rows,
+    config
+):
+    """
+    Transform platform history rows.
+    """
+
+    return [
+        {
+            "platform": row["value"],
+            "count": row["count"]
+        }
+        for row in rows
+        if row["value"]
+    ]
+
+
+def transform_user_rows(
+    rows,
+    config
+):
+    """
+    Transform user history rows.
+    """
+
+    return [
+        {
+            "username": row["username"],
+            "count": row["count"]
+        }
+        for row in rows
+        if row["username"]
+    ]
+
+
+
+
+# -----------------------------------------------------------------------------
+# Sorting, limiting and duration (ms)
+# -----------------------------------------------------------------------------
+
+def get_item_label(item):
+
+    return (
+        item.get("codec")
+        or item.get("resolution")
+        or item.get("display")
+        or "Unknown"
+    )
+
+
+def sort_items(items, config):
+    """
+    Sort items either by count or alphabetical
+    and descending or ascending
+    """
+
+    sort_order = config.get(
+        "sort_order",
+        "count_desc"
+    )
 
     logger.info(
-        f"Building response with {len(items)} items"
+        "Sorting items using %s",
+        sort_order
     )
+
+    match sort_order:
+
+        case "count_desc":
+
+            return sorted(
+                items,
+                key=lambda item: item["count"],
+                reverse=True
+            )
+
+        case "count_asc":
+
+            return sorted(
+                items,
+                key=lambda item: item["count"]
+            )
+
+        case "alphabetical":
+
+            return sorted(
+                items,
+                key=lambda item: get_item_label(item).lower()
+            )
+
+        case _:
+
+            logger.warning(
+                "Invalid sort_order '%s', using count_desc",
+                sort_order
+            )
+
+            return sorted(
+                items,
+                key=lambda item: item["count"],
+                reverse=True
+            )
+
+
+def apply_limits(items, config):
+    """
+    Apply top_n and group_other configuration
+    to a list of items.
+    """
+
+    top_n = config.get(
+        "top_n",
+        10
+    )
+
+    group_other = config.get(
+        "group_other",
+        True
+    )
+
+    logger.info(
+        "Applying limits to top %s",
+        top_n
+    )
+
+    logger.info(
+        "Applying limits to group others %s",
+        group_other
+    )
+
+    if len(items) <= top_n:
+        return items
+
+    if not group_other:
+        return items[:top_n]
+
+    if top_n < 2:
+        top_n = 2
+
+    visible_count = top_n - 1
+
+    visible_items = items[:visible_count]
+
+    other_items = items[visible_count:]
+
+    other_count = sum(
+        item["count"]
+        for item in other_items
+    )
+
+    if other_count > 0:
+
+        label_key = None
+
+        for key in (
+            "display",
+            "codec",
+            "resolution",
+            "country",
+            "device",
+            "platform",
+            "user"
+        ):
+            if key in visible_items[0]:
+                label_key = key
+                break
+
+        if label_key:
+
+            visible_items.append({
+                label_key: "Other",
+                "count": other_count
+            })
+
+    return visible_items
+
+
+def format_duration(ms):
+    """
+    Convert milliseconds to a human readable string.
+    """
+
+    total_seconds = ms // 1000
+
+    days = total_seconds // 86400
+
+    hours = (
+        total_seconds % 86400
+    ) // 3600
+
+    minutes = (
+        total_seconds % 3600
+    ) // 60
+
+    if days > 0:
+        return f"{days}d {hours}h"
+
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+
+    return f"{minutes}m"
+
+
+def format_bytes(size_bytes):
+    """
+    Convert bytes to a human readable string.
+    """
+
+    if size_bytes == 0:
+        return "0 B"
+
+    units = [
+        "B",
+        "KB",
+        "MB",
+        "GB",
+        "TB",
+        "PB"
+    ]
+
+    size = float(size_bytes)
+
+    for unit in units:
+
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+
+        size /= 1024
+
+    return f"{size:.1f} PB"
+
+
+# -----------------------------------------------------------------------------
+# Response helpers
+# -----------------------------------------------------------------------------
+
+def build_response(items):
 
     return {
         "total": len(items),
@@ -430,37 +692,63 @@ def build_response(items):
     }
 
 
+def run_query(
+    sql_file,
+    transformer,
+    apply_sorting=True,
+    apply_limiting=True
+):
+    """
+    Execute a Tracearr SQL query, transform the results,
+    apply sorting and limits, and return a JSON response.
+    """
+
+    config = load_config()
+
+    rows = execute_sql_file(
+        sql_file
+    )
+
+    items = transformer(
+        rows,
+        config
+    )
+
+    if apply_sorting:
+
+        items = sort_items(
+            items,
+            config
+        )
+
+    if apply_limiting:
+
+        items = apply_limits(
+            items,
+            config
+        )
+
+    return jsonify(
+        build_response(items)
+    )
+
+
+# -----------------------------------------------------------------------------
+# Routes
+# -----------------------------------------------------------------------------
+
 @tracearr_bp.route(
     "/resolutions/movies"
 )
 def resolutions_movies():
 
     logger.info(
-        "Fetching resolution statistics for movies"
+        "Movie resolutions requested"
     )
 
-    rows = execute_sql_file(
-        "tracearr_resolutions_movies.sql"
-    )
-
-    items = transform_resolution_rows(
-        rows
-    )
-
-    items = sort_items(
-        items
-    )
-
-    items = apply_limits(
-        items
-    )
-
-    logger.info(
-        f"Returning {len(items)} resolution items for movies"
-    )
-
-    return jsonify(
-        build_response(items)
+    return run_query(
+        "tracearr_resolutions_movies.sql",
+        transform_resolution_rows
     )
 
 
@@ -470,31 +758,12 @@ def resolutions_movies():
 def resolutions_tv():
 
     logger.info(
-        "Fetching resolution statistics for TV"
+        "TV resolutions requested"
     )
 
-    rows = execute_sql_file(
-        "tracearr_resolutions_tv.sql"
-    )
-
-    items = transform_resolution_rows(
-        rows
-    )
-
-    items = sort_items(
-        items
-    )
-
-    items = apply_limits(
-        items
-    )
-
-    logger.info(
-        f"Returning {len(items)} resolution items for TV"
-    )
-
-    return jsonify(
-        build_response(items)
+    return run_query(
+        "tracearr_resolutions_tv.sql",
+        transform_resolution_rows
     )
 
 
@@ -504,31 +773,12 @@ def resolutions_tv():
 def video_codecs():
 
     logger.info(
-        "Fetching video codec statistics"
+        "Video codecs requested"
     )
 
-    rows = execute_sql_file(
-        "tracearr_video_codecs.sql"
-    )
-
-    items = transform_codec_rows(
-        rows
-    )
-
-    items = sort_items(
-        items
-    )
-
-    items = apply_limits(
-        items
-    )
-
-    logger.info(
-        f"Returning {len(items)} video codec statistics"
-    )
-
-    return jsonify(
-        build_response(items)
+    return run_query(
+        "tracearr_video_codecs.sql",
+        transform_codec_rows
     )
 
 
@@ -538,65 +788,12 @@ def video_codecs():
 def audio_codecs():
 
     logger.info(
-        "Fetching audio codec statistics"
+        "Audio codecs requested"
     )
 
-    rows = execute_sql_file(
-        "tracearr_audio_codecs.sql"
-    )
-
-    items = transform_codec_rows(
-        rows
-    )
-
-    items = sort_items(
-        items
-    )
-
-    items = apply_limits(
-        items
-    )
-
-    logger.info(
-        f"Returning {len(items)} audio codec statistics"
-    )
-
-    return jsonify(
-        build_response(items)
-    )
-
-
-@tracearr_bp.route(
-    "/audio_channels"
-)
-def audio_channels():
-
-    logger.info(
-        "Fetching audio channel statistics"
-    )
-
-    rows = execute_sql_file(
-        "tracearr_audio_channels.sql"
-    )
-
-    items = transform_audio_channel_rows(
-        rows
-    )
-
-    items = sort_items(
-        items
-    )
-
-    items = apply_limits(
-        items
-    )
-
-    logger.info(
-        f"Returning {len(items)} audio channel statistics"
-    )
-
-    return jsonify(
-        build_response(items)
+    return run_query(
+        "tracearr_audio_codecs.sql",
+        transform_codec_rows
     )
 
 
@@ -606,29 +803,132 @@ def audio_channels():
 def music_codecs():
 
     logger.info(
-        "Fetching music codec statistics"
+        "Music codecs requested"
     )
 
-    rows = execute_sql_file(
-        "tracearr_music_codecs.sql"
-    )
+    return run_query(
+        "tracearr_music_codecs.sql",
+        transform_codec_rows
+)
 
-    items = transform_codec_rows(
-        rows
-    )
-
-    items = sort_items(
-        items
-    )
-
-    items = apply_limits(
-        items
-    )
+@tracearr_bp.route(
+    "/audio_channels"
+)
+def audio_channels():
 
     logger.info(
-        f"Returning {len(items)} music codec statistics"
+        "Audio channels requested"
+    )
+
+    return run_query(
+        "tracearr_audio_channels.sql",
+        transform_audio_channel_rows
+    )
+
+@tracearr_bp.route(
+    "/stats"
+)
+def stats():
+
+    logger.info(
+        "Library statistics requested"
+    )
+
+    config = load_config()
+
+    rows = execute_sql_file(
+        "tracearr_stats.sql"
+    )
+
+    items = transform_stats_rows(
+        rows,
+        config
     )
 
     return jsonify(
-        build_response(items)
+        {
+            "items": items
+        }
+    )
+
+@tracearr_bp.route(
+    "/history/countries"
+)
+def history_countries():
+
+    logger.info(
+        "History countries requested"
+    )
+
+    return run_query(
+        "tracearr_history_countries.sql",
+        transform_country_rows
+    )
+
+@tracearr_bp.route(
+    "/history/devices"
+)
+def history_devices():
+
+    logger.info(
+        "History devices requested"
+    )
+
+    return run_query(
+        "tracearr_history_devices.sql",
+        transform_device_rows
+    )
+
+@tracearr_bp.route(
+    "/history/platforms"
+)
+def history_platforms():
+
+    logger.info(
+        "History platforms requested"
+    )
+
+    return run_query(
+        "tracearr_history_platforms.sql",
+        transform_platform_rows
+    )
+
+@tracearr_bp.route(
+    "/history/users"
+)
+def history_users():
+
+    logger.info(
+        "History users requested"
+    )
+
+    return run_query(
+        "tracearr_history_users.sql",
+        transform_user_rows
+    )
+
+@tracearr_bp.route(
+    "/history/stats"
+)
+def history_stats():
+
+    logger.info(
+        "History stats requested"
+    )
+
+    config = load_config()
+
+    rows = execute_sql_file(
+        "tracearr_history_stats.sql"
+    )
+
+    items = transform_history_stats_rows(
+        rows,
+        config
+    )
+
+    return jsonify(
+        {
+            "items": items
+        }
     )

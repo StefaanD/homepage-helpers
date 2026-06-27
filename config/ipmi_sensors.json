@@ -5,10 +5,12 @@
     "Peripheral Temp"
   ],
   "fans": [
+    "FAN1",
     "FAN2",
     "FAN3",
     "FAN4",
     "FAN5",
+    "FANA",
     "FANB"
   ]
 }

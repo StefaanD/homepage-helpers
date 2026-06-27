@@ -2,9 +2,12 @@
 Tautulli provider for Homepage Helpers.
 
 Requires:
-- connection to the Tautulli DB /config/tautulli.db (set TAUTULLI_DB env var if different)
+- connection to the Tautulli DB /config/tautulli.db (set
+    TAUTULLI_CONFIG_DIR
+    TAUTULLI_DB env vars)
 
-Returns aggregated or detailed library stats in JSON format for Homepage customapi widgets.
+Endpoints:
+/tautulli/stats?aggregate=on|off
 """
 
 import sqlite3
@@ -12,8 +15,18 @@ import os
 import time
 import logging
 
+from flask import Blueprint
+from flask import jsonify
+
 
 logger = logging.getLogger(__name__)
+
+
+tautulli_bp = Blueprint(
+    "tautulli",
+    __name__,
+    url_prefix="/tautulli"
+)
 
 
 DB_PATH = os.getenv(
@@ -39,11 +52,15 @@ def get_stats(aggregate=True):
 
         if now - cached["time"] < CACHE_TTL:
 
-            logger.info("Tautulli cache hit")
+            logger.info(
+                "Tautulli cache hit"
+            )
 
             return cached["data"]
 
-    logger.info("Fetching Tautulli stats from database")
+    logger.info(
+        "Fetching Tautulli stats from database"
+    )
 
     # database query
     conn = sqlite3.connect(DB_PATH)

@@ -1,0 +1,13 @@
+[MESSAGES CONTROL]
+
+disable=
+    missing-function-docstring
+
+
+[TYPECHECK]
+
+ignored-modules=
+    flask,
+    psycopg2,
+    psycopg2.extras,
+    requests

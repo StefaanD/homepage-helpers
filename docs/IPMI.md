@@ -6,7 +6,7 @@ If IMPI is not used in your setup, then the line below can be removed from the D
 ```
 RUN apk add --no-cache freeipmi
 ```
-### 1. IPMI stats
+### 1. Provider - IPMI stats
 
 The endpoint is `/ipmi/sensors` and expects the following input parameters to work;
 * `host` the host IP address of FQDN
@@ -33,4 +33,4 @@ This endpoint also uses a configuration file found under `/queries/ipmi_sensors.
 
 ### 2. Examples
 
-- [Examples](/docs/EXAMPLES.md)
+- [Examples](/docs/EXAMPLES_IPMI.md)
